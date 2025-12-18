@@ -96,7 +96,7 @@ int MyMPI_Scatter(const void *sendbuf, int sendcount, MPI_Datatype sendtype, voi
         const int child_real = (child_virtual + root) % size;
 
         if (rank == root && base != nullptr) {
-          const char *child_data = base + child_virtual * sendcount * type_size;
+          const char *child_data = base + child_real * sendcount * type_size;
           MPI_Send(child_data, sendcount, sendtype, child_real, 0, comm);
         } else if (rank != child_real) {
           MPI_Send(recvbuf, sendcount, sendtype, child_real, 0, comm);
@@ -111,7 +111,7 @@ int MyMPI_Scatter(const void *sendbuf, int sendcount, MPI_Datatype sendtype, voi
   }
 
   if (rank == root && sendbuf != MPI_IN_PLACE && base != nullptr) {
-    const char *my_data = base + virtual_rank * sendcount * type_size;
+    const char *my_data = base + rank * sendcount * type_size;
     std::memcpy(recvbuf, my_data, static_cast<std::size_t>(sendcount) * type_size);
   }
 

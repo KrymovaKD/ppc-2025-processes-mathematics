@@ -1,9 +1,13 @@
 #pragma once
 
+#include <mpi.h>
+
 #include "krymova_k_scatter/common/include/common.hpp"
 #include "task/include/task.hpp"
-
 namespace krymova_k_scatter {
+
+int MyMPI_Scatter(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount,
+                  MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 class KrymovaKScatterMPI : public BaseTask {
  public:
