@@ -14,11 +14,14 @@ namespace krymova_k_scatter {
 class KrymovaKScatterPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  protected:
   void SetUp() override {
-    count_ = 100000;
+    count_ = 1000000;
 
     MPI_Comm_size(MPI_COMM_WORLD, &size_);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
 
-    input_data_ = InType(0, 0, count_);
+    int root = size_ - 1;
+
+    input_data_ = InType(root, 0, count_);
 
     int total_size = size_ * count_;
 
@@ -30,6 +33,10 @@ class KrymovaKScatterPerfTests : public ppc::util::BaseRunPerfTests<InType, OutT
     for (int i = 0; i < total_size; ++i) {
       input_data_.int_data[i] = dist(gen);
     }
+
+    // Очищаем ненужные буферы
+    input_data_.float_data.clear();
+    input_data_.double_data.clear();
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
@@ -43,6 +50,7 @@ class KrymovaKScatterPerfTests : public ppc::util::BaseRunPerfTests<InType, OutT
  private:
   InType input_data_{};
   int size_;
+  int rank_;
   int count_;
 };
 
