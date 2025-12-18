@@ -104,7 +104,6 @@ bool KrymovaKScatterSEQ::RunImpl() {
       recv_int.resize(recvcount);
       recvbuf = recv_int.data();
       if (rank == input.root) {
-        // Безопасное приведение через void*
         sendbuf = static_cast<void *>(const_cast<int *>(input.int_data.data()));
       }
       break;

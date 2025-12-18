@@ -54,7 +54,7 @@ bool KrymovaKScatterMPI::PreProcessingImpl() {
 
 int MyMPI_Scatter(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount,
                   MPI_Datatype recvtype, int root, MPI_Comm comm) {
-  (void)recvtype;  // Явно указываем, что параметр не используется
+  (void)recvtype;
 
   int rank = 0;
   int size = 0;

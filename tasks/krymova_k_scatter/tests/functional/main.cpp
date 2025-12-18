@@ -47,8 +47,6 @@ class KrymovaKScatterFuncTests : public ppc::util::BaseRunFuncTests<InType, OutT
       size_ = 1;
       rank_ = 0;
     }
-
-    // КОРРЕКЦИЯ: root должен быть в диапазоне [0, size_-1]
     root_ = original_root_ % size_;
 
     input_data_ = InType(root_, data_type_, count_);
@@ -89,7 +87,6 @@ class KrymovaKScatterFuncTests : public ppc::util::BaseRunFuncTests<InType, OutT
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    // Для последовательной версии возвращается count_, для MPI - тоже count_
     return output_data == count_;
   }
 
@@ -99,8 +96,8 @@ class KrymovaKScatterFuncTests : public ppc::util::BaseRunFuncTests<InType, OutT
 
  private:
   InType input_data_;
-  int original_root_;  // Исходный root из параметров теста
-  int root_;           // Скорректированный root
+  int original_root_;
+  int root_;
   int data_type_;
   int count_;
   int size_;
@@ -113,7 +110,6 @@ TEST_P(KrymovaKScatterFuncTests, ScatterTest) {
   ExecuteTest(GetParam());
 }
 
-// ИСПРАВЛЕННЫЙ: убираем корни больше 2, так как они будут корректироваться
 const std::array<TestType, 9> kTestParam = {
     std::make_tuple(0, "int"), std::make_tuple(0, "float"), std::make_tuple(0, "double"),
     std::make_tuple(1, "int"), std::make_tuple(1, "float"), std::make_tuple(1, "double"),
