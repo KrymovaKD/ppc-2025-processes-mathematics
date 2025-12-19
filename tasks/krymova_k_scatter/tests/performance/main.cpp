@@ -14,7 +14,7 @@ namespace krymova_k_scatter {
 class KrymovaKScatterPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  protected:
   void SetUp() override {
-    count_ = 1000000;
+    count_ = 5000000;
 
     MPI_Comm_size(MPI_COMM_WORLD, &size_);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
