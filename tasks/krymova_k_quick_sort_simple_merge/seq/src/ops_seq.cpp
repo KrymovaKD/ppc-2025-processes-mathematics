@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "krymova_k_quick_sort_simple_merge/common/include/common.hpp"
+
 namespace krymova_k_quick_sort_simple_merge {
 
 KrymovaKQuickSortSimpleMergeSEQ::KrymovaKQuickSortSimpleMergeSEQ(const InType &in) {
@@ -20,7 +22,7 @@ bool KrymovaKQuickSortSimpleMergeSEQ::PreProcessingImpl() {
   return true;
 }
 
-void KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector<int> &arr) {
+void KrymovaKQuickSortSimpleMergeSEQ::QuickSortIterative(std::vector<int> &arr) {
   if (arr.size() <= 1) {
     return;
   }
@@ -41,8 +43,8 @@ void KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector<int> &arr) 
       continue;
     }
 
-    int mid = left + (right - left) / 2;
-    int pivot_idx;
+    int mid = left + ((right - left) / 2);
+    int pivot_idx = mid;
     if (arr[left] > arr[mid]) {
       if (arr[mid] > arr[right]) {
         pivot_idx = mid;
@@ -87,7 +89,7 @@ void KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector<int> &arr) 
 
 bool KrymovaKQuickSortSimpleMergeSEQ::RunImpl() {
   std::vector<int> data = GetInput();
-  quickSortIterative(data);
+  QuickSortIterative(data);
   GetOutput() = data;
   return true;
 }

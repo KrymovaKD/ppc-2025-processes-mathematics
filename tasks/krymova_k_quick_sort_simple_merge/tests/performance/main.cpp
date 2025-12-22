@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <mpi.h>
 
 #include <algorithm>
-#include <string>
+#include <cstddef>
+#include <ranges>
 #include <vector>
 
 #include "krymova_k_quick_sort_simple_merge/common/include/common.hpp"
@@ -13,12 +13,12 @@
 namespace krymova_k_quick_sort_simple_merge {
 
 class KrymovaKQuickSortSimpleMergePerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const size_t kArraySize_ = 100000;
+  const std::size_t kArraySize_ = 100000;
   InType input_data_;
 
   void SetUp() override {
     input_data_.resize(kArraySize_);
-    for (size_t i = 0; i < kArraySize_; ++i) {
+    for (std::size_t i = 0; i < kArraySize_; ++i) {
       if (i < kArraySize_ / 2) {
         input_data_[i] = static_cast<int>(kArraySize_ - i);
       } else {
@@ -32,7 +32,7 @@ class KrymovaKQuickSortSimpleMergePerfTests : public ppc::util::BaseRunPerfTests
       return false;
     }
 
-    return std::is_sorted(output_data.begin(), output_data.end());
+    return std::ranges::is_sorted(output_data);
   }
 
   InType GetTestInputData() final {

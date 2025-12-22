@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <ranges>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -57,14 +58,14 @@ class KrymovaKQuickSortSimpleMergeFuncTests : public ppc::util::BaseRunFuncTests
     }
 
     expected_result_ = input_data_;
-    std::sort(expected_result_.begin(), expected_result_.end());
+    std::ranges::sort(expected_result_);
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
     if (output_data.size() != expected_result_.size()) {
       return false;
     }
-    if (!std::is_sorted(output_data.begin(), output_data.end())) {
+    if (!std::ranges::is_sorted(output_data)) {
       return false;
     }
     return output_data == expected_result_;

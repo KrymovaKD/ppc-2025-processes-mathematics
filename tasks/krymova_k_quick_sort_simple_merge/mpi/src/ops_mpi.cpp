@@ -3,8 +3,7 @@
 #include <mpi.h>
 
 #include <algorithm>
-#include <iostream>
-#include <queue>
+#include <cstddef>
 #include <vector>
 
 namespace krymova_k_quick_sort_simple_merge {
@@ -23,7 +22,7 @@ bool KrymovaKQuickSortSimpleMergeMPI::PreProcessingImpl() {
   return true;
 }
 
-void KrymovaKQuickSortSimpleMergeMPI::quickSortIterative(std::vector<int> &arr) {
+void KrymovaKQuickSortSimpleMergeMPI::QuickSortIterative(std::vector<int> &arr) {
   if (arr.size() <= 1) {
     return;
   }
@@ -44,8 +43,8 @@ void KrymovaKQuickSortSimpleMergeMPI::quickSortIterative(std::vector<int> &arr) 
       continue;
     }
 
-    int mid = left + (right - left) / 2;
-    int pivot_idx;
+    int mid = left + ((right - left) / 2);
+    int pivot_idx = mid;
 
     if (arr[left] > arr[mid]) {
       if (arr[mid] > arr[right]) {
@@ -88,11 +87,12 @@ void KrymovaKQuickSortSimpleMergeMPI::quickSortIterative(std::vector<int> &arr) 
     }
   }
 }
-std::vector<int> KrymovaKQuickSortSimpleMergeMPI::mergeTwoSorted(const std::vector<int> &a, const std::vector<int> &b) {
+std::vector<int> KrymovaKQuickSortSimpleMergeMPI::MergeTwoSorted(const std::vector<int> &a, const std::vector<int> &b) {
   std::vector<int> result;
   result.reserve(a.size() + b.size());
 
-  size_t i = 0, j = 0;
+  std::size_t i = 0;
+  std::size_t j = 0;
 
   while (i < a.size() && j < b.size()) {
     if (a[i] <= b[j]) {
@@ -102,14 +102,15 @@ std::vector<int> KrymovaKQuickSortSimpleMergeMPI::mergeTwoSorted(const std::vect
     }
   }
 
-  result.insert(result.end(), a.begin() + i, a.end());
-  result.insert(result.end(), b.begin() + j, b.end());
+  result.insert(result.end(), a.begin() + static_cast<std::ptrdiff_t>(i), a.end());
+  result.insert(result.end(), b.begin() + static_cast<std::ptrdiff_t>(j), b.end());
 
   return result;
 }
 
 bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -150,7 +151,7 @@ bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
                  MPI_INT, 0, MPI_COMM_WORLD);
   }
 
-  quickSortIterative(local_data);
+  QuickSortIterative(local_data);
 
   std::vector<int> current_data = local_data;
   int partner_distance = 1;
@@ -160,7 +161,7 @@ bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
 
     if (partner_rank < size) {
       int my_size = static_cast<int>(current_data.size());
-      int partner_size;
+      int partner_size = 0;
 
       MPI_Sendrecv(&my_size, 1, MPI_INT, partner_rank, 0, &partner_size, 1, MPI_INT, partner_rank, 0, MPI_COMM_WORLD,
                    MPI_STATUS_IGNORE);
@@ -176,7 +177,7 @@ bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
       }
 
       if (rank < partner_rank) {
-        current_data = mergeTwoSorted(current_data, partner_data);
+        current_data = MergeTwoSorted(current_data, partner_data);
       } else {
         current_data.clear();
       }
@@ -192,13 +193,13 @@ bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
     final_result = current_data;
 
     for (int i = 1; i < size; ++i) {
-      int part_size;
+      int part_size = 0;
       MPI_Recv(&part_size, 1, MPI_INT, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
       if (part_size > 0) {
         std::vector<int> part_data(part_size);
         MPI_Recv(part_data.data(), part_size, MPI_INT, i, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        final_result = mergeTwoSorted(final_result, part_data);
+        final_result = MergeTwoSorted(final_result, part_data);
       }
     }
   } else {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "krymova_k_quick_sort_simple_merge/common/include/common.hpp"
 #include "task/include/task.hpp"
 
@@ -18,7 +20,7 @@ class KrymovaKQuickSortSimpleMergeSEQ : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
-  void quickSortIterative(std::vector<int> &arr);
+  void QuickSortIterative(std::vector<int> &arr);
 };
 
 }  // namespace krymova_k_quick_sort_simple_merge
