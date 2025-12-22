@@ -2,234 +2,174 @@
 
 #include <mpi.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 #include "krymova_k_scatter/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace krymova_k_scatter {
 
 KrymovaKScatterMPI::KrymovaKScatterMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
-  GetOutput() = 0;
 }
 
 bool KrymovaKScatterMPI::ValidationImpl() {
-  int size = 1;
-  int initialized = 0;
-  MPI_Initialized(&initialized);
-  if (initialized) {
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+  const auto &args = GetInput();
+
+  bool is_invalid_counts = (args.send_count <= 0) || (args.send_count != args.recv_count);
+  bool is_invalid_root = (args.root_rank < 0);
+
+  if (is_invalid_counts || is_invalid_root) {
+    return false;
   }
 
-  const auto &input = GetInput();
-  if (input.root < 0 || input.root >= size) {
+  if (args.send_type != args.recv_type) {
     return false;
   }
-  if (input.data_type < 0 || input.data_type > 2) {
-    return false;
-  }
-  if (input.count <= 0) {
-    return false;
-  }
-  const int total_size = size * input.count;
-  if (input.data_type == 0 && static_cast<int>(input.int_data.size()) < total_size) {
-    return false;
-  }
-  if (input.data_type == 1 && static_cast<int>(input.float_data.size()) < total_size) {
-    return false;
-  }
-  if (input.data_type == 2 && static_cast<int>(input.double_data.size()) < total_size) {
-    return false;
-  }
-  return GetOutput() == 0;
+
+  auto is_supported = [](MPI_Datatype t) { return (t == MPI_INT || t == MPI_FLOAT || t == MPI_DOUBLE); };
+
+  return is_supported(args.send_type);
 }
 
 bool KrymovaKScatterMPI::PreProcessingImpl() {
-  GetOutput() = 0;
+  auto &args = GetInput();
+  int comm_size = 0;
+  MPI_Comm_size(args.comm, &comm_size);
+
+  if (args.root_rank >= comm_size) {
+    args.root_rank %= comm_size;
+  }
+
   return true;
 }
 
-int MyMPI_Scatter(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount,
-                  MPI_Datatype recvtype, int root, MPI_Comm comm) {
-  (void)recvtype;
+namespace {
+size_t GetTypeByteSize(MPI_Datatype type) {
+  MPI_Aint lb = 0;
+  MPI_Aint extent = 0;
+  MPI_Type_get_extent(type, &lb, &extent);
+  return static_cast<size_t>(extent);
+}
+
+int MapVirtToReal(int virt_rank, int root, int size) {
+  return (virt_rank + root) % size;
+}
+
+std::vector<uint8_t> PrepareRootData(const void *src, int size, int root, int count, size_t type_size) {
+  size_t chunk_bytes = static_cast<size_t>(count) * type_size;
+  size_t total_bytes = static_cast<size_t>(size) * chunk_bytes;
+
+  std::vector<uint8_t> buffer(total_bytes);
+
+  const auto *src_bytes = static_cast<const uint8_t *>(src);
+  uint8_t *dst_bytes = buffer.data();
+
+  size_t offset = root * chunk_bytes;
+  size_t tail_size = total_bytes - offset;
+
+  std::copy(src_bytes + offset, src_bytes + total_bytes, dst_bytes);
+
+  std::copy(src_bytes, src_bytes + offset, dst_bytes + tail_size);
+
+  return buffer;
+}
+
+void ExecScatterCycle(int size, int root, int rank, int count, MPI_Datatype type, size_t type_size, MPI_Comm comm,
+                      const uint8_t *&active_ptr, std::vector<uint8_t> &buffer) {
+  int relative_rank = (rank - root + size) % size;
+
+  int start_stride = 1;
+  while (start_stride < size) {
+    start_stride <<= 1;
+  }
+  start_stride >>= 1;
+
+  for (int stride = start_stride; stride > 0; stride >>= 1) {
+    if (relative_rank % stride != 0) {
+      continue;
+    }
+
+    bool is_sender = (relative_rank % (stride << 1) == 0);
+
+    if (is_sender) {
+      int virt_dest = relative_rank + stride;
+
+      if (virt_dest < size) {
+        int limit = std::min(virt_dest + stride, size);
+        int send_amt = (limit - virt_dest) * count;
+
+        size_t byte_shift = static_cast<size_t>(virt_dest - relative_rank) * count * type_size;
+        int real_dest = MapVirtToReal(virt_dest, root, size);
+
+        MPI_Send(active_ptr + byte_shift, send_amt, type, real_dest, 0, comm);
+      }
+    } else {
+      int virt_src = relative_rank - stride;
+      int real_src = MapVirtToReal(virt_src, root, size);
+
+      int limit = std::min(relative_rank + stride, size);
+      int recv_amt = (limit - relative_rank) * count;
+
+      size_t required_bytes = static_cast<size_t>(recv_amt) * type_size;
+      buffer.resize(required_bytes);
+
+      MPI_Recv(buffer.data(), recv_amt, type, real_src, 0, comm, MPI_STATUS_IGNORE);
+
+      active_ptr = buffer.data();
+    }
+  }
+}
+
+}  // namespace
+
+bool KrymovaKScatterMPI::RunImpl() {
+  auto &args = GetInput();
 
   int rank = 0;
   int size = 0;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  MPI_Comm_rank(args.comm, &rank);
+  MPI_Comm_size(args.comm, &size);
 
-  if (sendcount != recvcount) {
-    return MPI_ERR_COUNT;
+  size_t type_size = GetTypeByteSize(args.recv_type);
+
+  std::vector<uint8_t> internal_buf;
+  const uint8_t *active_data_ptr = nullptr;
+
+  if (rank == args.root_rank) {
+    internal_buf = PrepareRootData(args.src_buffer, size, args.root_rank, args.recv_count, type_size);
+    active_data_ptr = internal_buf.data();
   }
 
-  int type_size = 0;
-  if (MPI_Type_size(sendtype, &type_size) != MPI_SUCCESS) {
-    return MPI_ERR_TYPE;
+  ExecScatterCycle(size, args.root_rank, rank, args.recv_count, args.recv_type, type_size, args.comm, active_data_ptr,
+                   internal_buf);
+
+  if (args.dst_buffer != MPI_IN_PLACE && active_data_ptr != nullptr) {
+    size_t bytes_to_copy = args.recv_count * type_size;
+    auto *user_dst = static_cast<uint8_t *>(args.dst_buffer);
+    std::copy(active_data_ptr, active_data_ptr + bytes_to_copy, user_dst);
   }
 
-  if (size == 1) {
-    if (rank == root && sendbuf != MPI_IN_PLACE) {
-      std::memcpy(recvbuf, sendbuf, static_cast<std::size_t>(sendcount) * type_size);
-    }
-    return MPI_SUCCESS;
+  size_t result_bytes = args.recv_count * type_size;
+  std::vector<uint8_t> result(result_bytes);
+
+  const void *final_src = (args.dst_buffer != nullptr) ? args.dst_buffer : active_data_ptr;
+  if (final_src != nullptr) {
+    const auto *ptr = static_cast<const uint8_t *>(final_src);
+    std::copy(ptr, ptr + result_bytes, result.begin());
   }
 
-  const char *base = nullptr;
-  if (sendbuf == MPI_IN_PLACE) {
-    if (rank == root) {
-      base = reinterpret_cast<const char *>(recvbuf);
-    }
-  } else {
-    base = reinterpret_cast<const char *>(sendbuf);
-  }
-
-  const int virtual_rank = (rank - root + size) % size;
-
-  int mask = 1;
-  while (mask < size) {
-    if ((virtual_rank & mask) == 0) {
-      const int child_virtual = virtual_rank | mask;
-      if (child_virtual < size) {
-        const int child_real = (child_virtual + root) % size;
-
-        if (rank == root && base != nullptr) {
-          const char *child_data = base + child_real * sendcount * type_size;
-          MPI_Send(child_data, sendcount, sendtype, child_real, 0, comm);
-        } else if (rank != child_real) {
-          MPI_Send(recvbuf, sendcount, sendtype, child_real, 0, comm);
-        }
-      }
-    } else {
-      const int parent_virtual = virtual_rank & ~mask;
-      const int parent_real = (parent_virtual + root) % size;
-      MPI_Recv(recvbuf, recvcount, sendtype, parent_real, 0, comm, MPI_STATUS_IGNORE);
-    }
-    mask <<= 1;
-  }
-
-  if (rank == root && sendbuf != MPI_IN_PLACE && base != nullptr) {
-    const char *my_data = base + rank * sendcount * type_size;
-    std::memcpy(recvbuf, my_data, static_cast<std::size_t>(sendcount) * type_size);
-  }
-
-  return MPI_SUCCESS;
-}
-
-bool KrymovaKScatterMPI::RunImpl() {
-  const auto &input = GetInput();
-  int rank = 0;
-  int size = 1;
-
-  int initialized = 0;
-  MPI_Initialized(&initialized);
-  if (initialized) {
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-  }
-
-  MPI_Datatype mpi_type;
-  switch (input.data_type) {
-    case 0:
-      mpi_type = MPI_INT;
-      break;
-    case 1:
-      mpi_type = MPI_FLOAT;
-      break;
-    case 2:
-      mpi_type = MPI_DOUBLE;
-      break;
-    default:
-      return false;
-  }
-
-  void *sendbuf = nullptr;
-  void *recvbuf = nullptr;
-  const int recvcount = input.count;
-
-  std::vector<int> recv_int;
-  std::vector<float> recv_float;
-  std::vector<double> recv_double;
-
-  switch (input.data_type) {
-    case 0:
-      recv_int.resize(recvcount);
-      recvbuf = recv_int.data();
-      if (rank == input.root) {
-        sendbuf = static_cast<void *>(const_cast<int *>(input.int_data.data()));
-      }
-      break;
-    case 1:
-      recv_float.resize(recvcount);
-      recvbuf = recv_float.data();
-      if (rank == input.root) {
-        sendbuf = static_cast<void *>(const_cast<float *>(input.float_data.data()));
-      }
-      break;
-    case 2:
-      recv_double.resize(recvcount);
-      recvbuf = recv_double.data();
-      if (rank == input.root) {
-        sendbuf = static_cast<void *>(const_cast<double *>(input.double_data.data()));
-      }
-      break;
-  }
-
-  int result = MPI_SUCCESS;
-  if (initialized) {
-    result = MyMPI_Scatter(sendbuf, input.count, mpi_type, recvbuf, recvcount, mpi_type, input.root, MPI_COMM_WORLD);
-  } else {
-    if (rank == input.root) {
-      const char *base = nullptr;
-      std::size_t type_size = 0;
-      switch (input.data_type) {
-        case 0:
-          base = reinterpret_cast<const char *>(input.int_data.data());
-          type_size = sizeof(int);
-          break;
-        case 1:
-          base = reinterpret_cast<const char *>(input.float_data.data());
-          type_size = sizeof(float);
-          break;
-        case 2:
-          base = reinterpret_cast<const char *>(input.double_data.data());
-          type_size = sizeof(double);
-          break;
-      }
-      std::memcpy(recvbuf, base, recvcount * type_size);
-    }
-  }
-
-  if (result != MPI_SUCCESS) {
-    return false;
-  }
-
-  bool data_valid = false;
-  switch (input.data_type) {
-    case 0:
-      data_valid = !recv_int.empty();
-      break;
-    case 1:
-      data_valid = !recv_float.empty();
-      break;
-    case 2:
-      data_valid = !recv_double.empty();
-      break;
-  }
-
-  GetOutput() = data_valid ? recvcount : 0;
-
-  if (initialized) {
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
-
-  return data_valid;
+  GetOutput() = std::move(result);
+  return true;
 }
 
 bool KrymovaKScatterMPI::PostProcessingImpl() {
-  return GetOutput() == GetInput().count;
+  return true;
 }
 
 }  // namespace krymova_k_scatter
