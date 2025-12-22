@@ -1,13 +1,4 @@
 #include <gtest/gtest.h>
-#include <mpi.h>
-
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <ranges>
-#include <string>
-#include <tuple>
-#include <vector>
 
 #include "krymova_k_quick_sort_simple_merge/common/include/common.hpp"
 #include "krymova_k_quick_sort_simple_merge/mpi/include/ops_mpi.hpp"

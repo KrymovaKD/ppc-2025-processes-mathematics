@@ -6,6 +6,8 @@
 #include <cstddef>
 #include <vector>
 
+#include "krymova_k_quick_sort_simple_merge/common/include/common.hpp"
+
 namespace krymova_k_quick_sort_simple_merge {
 
 KrymovaKQuickSortSimpleMergeMPI::KrymovaKQuickSortSimpleMergeMPI(const InType &in) {
@@ -21,93 +23,6 @@ bool KrymovaKQuickSortSimpleMergeMPI::ValidationImpl() {
 bool KrymovaKQuickSortSimpleMergeMPI::PreProcessingImpl() {
   return true;
 }
-
-void KrymovaKQuickSortSimpleMergeMPI::QuickSortIterative(std::vector<int> &arr) {
-  if (arr.size() <= 1) {
-    return;
-  }
-
-  struct StackItem {
-    int left;
-    int right;
-  };
-
-  std::vector<StackItem> stack;
-  stack.push_back({0, static_cast<int>(arr.size()) - 1});
-
-  while (!stack.empty()) {
-    auto [left, right] = stack.back();
-    stack.pop_back();
-
-    if (left >= right) {
-      continue;
-    }
-
-    int mid = left + ((right - left) / 2);
-    int pivot_idx = mid;
-
-    if (arr[left] > arr[mid]) {
-      if (arr[mid] > arr[right]) {
-        pivot_idx = mid;
-      } else if (arr[left] > arr[right]) {
-        pivot_idx = right;
-      } else {
-        pivot_idx = left;
-      }
-    } else {
-      if (arr[left] > arr[right]) {
-        pivot_idx = left;
-      } else if (arr[mid] > arr[right]) {
-        pivot_idx = right;
-      } else {
-        pivot_idx = mid;
-      }
-    }
-
-    std::swap(arr[pivot_idx], arr[right]);
-    int pivot_value = arr[right];
-
-    int i = left - 1;
-    for (int j = left; j < right; j++) {
-      if (arr[j] <= pivot_value) {
-        i++;
-        std::swap(arr[i], arr[j]);
-      }
-    }
-
-    std::swap(arr[i + 1], arr[right]);
-    int partition = i + 1;
-
-    if (partition - left > right - partition) {
-      stack.push_back({left, partition - 1});
-      stack.push_back({partition + 1, right});
-    } else {
-      stack.push_back({partition + 1, right});
-      stack.push_back({left, partition - 1});
-    }
-  }
-}
-std::vector<int> KrymovaKQuickSortSimpleMergeMPI::MergeTwoSorted(const std::vector<int> &a, const std::vector<int> &b) {
-  std::vector<int> result;
-  result.reserve(a.size() + b.size());
-
-  std::size_t i = 0;
-  std::size_t j = 0;
-
-  while (i < a.size() && j < b.size()) {
-    if (a[i] <= b[j]) {
-      result.push_back(a[i++]);
-    } else {
-      result.push_back(b[j++]);
-    }
-  }
-
-  result.insert(result.end(), a.begin() + static_cast<std::ptrdiff_t>(i), a.end());
-  result.insert(result.end(), b.begin() + static_cast<std::ptrdiff_t>(j), b.end());
-
-  return result;
-}
-
 bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
   int rank = 0;
   int size = 0;

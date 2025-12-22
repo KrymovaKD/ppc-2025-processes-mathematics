@@ -19,10 +19,6 @@ class KrymovaKQuickSortSimpleMergeMPI : public BaseTask {
   bool PreProcessingImpl() override;
   bool RunImpl() override;
   bool PostProcessingImpl() override;
-
-  void QuickSortIterative(std::vector<int> &arr);
-
-  std::vector<int> MergeTwoSorted(const std::vector<int> &a, const std::vector<int> &b);
 };
 
 }  // namespace krymova_k_quick_sort_simple_merge
