@@ -22,7 +22,7 @@ bool KrymovaKQuickSortSimpleMergeSEQ::PreProcessingImpl() {
 
 bool KrymovaKQuickSortSimpleMergeSEQ::RunImpl() {
   std::vector<int> data = GetInput();
-  quick_sort_iterative(data);
+  QuickSortIterative(data);
   GetOutput() = data;
   return true;
 }
