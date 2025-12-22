@@ -20,9 +20,9 @@ bool KrymovaKQuickSortSimpleMergeSEQ::PreProcessingImpl() {
   return true;
 }
 
-std::vector<int> KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector<int> &arr) {
+void KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector<int> &arr) {
   if (arr.size() <= 1) {
-    return arr;
+    return;
   }
 
   struct StackItem {
@@ -83,13 +83,12 @@ std::vector<int> KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector
       stack.push_back({left, partition - 1});
     }
   }
-
-  return arr;
 }
 
 bool KrymovaKQuickSortSimpleMergeSEQ::RunImpl() {
   std::vector<int> data = GetInput();
-  GetOutput() = quickSortIterative(data);
+  quickSortIterative(data);
+  GetOutput() = data;
   return true;
 }
 

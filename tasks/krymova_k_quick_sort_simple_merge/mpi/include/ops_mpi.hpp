@@ -20,7 +20,7 @@ class KrymovaKQuickSortSimpleMergeMPI : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
-  std::vector<int> quickSortIterative(std::vector<int> &arr);
+  void quickSortIterative(std::vector<int> &arr);
 
   std::vector<int> mergeTwoSorted(const std::vector<int> &a, const std::vector<int> &b);
 };

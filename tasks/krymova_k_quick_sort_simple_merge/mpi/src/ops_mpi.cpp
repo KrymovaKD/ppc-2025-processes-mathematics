@@ -23,9 +23,9 @@ bool KrymovaKQuickSortSimpleMergeMPI::PreProcessingImpl() {
   return true;
 }
 
-std::vector<int> KrymovaKQuickSortSimpleMergeMPI::quickSortIterative(std::vector<int> &arr) {
+void KrymovaKQuickSortSimpleMergeMPI::quickSortIterative(std::vector<int> &arr) {
   if (arr.size() <= 1) {
-    return arr;
+    return;
   }
 
   struct StackItem {
@@ -87,8 +87,6 @@ std::vector<int> KrymovaKQuickSortSimpleMergeMPI::quickSortIterative(std::vector
       stack.push_back({left, partition - 1});
     }
   }
-
-  return arr;
 }
 std::vector<int> KrymovaKQuickSortSimpleMergeMPI::mergeTwoSorted(const std::vector<int> &a, const std::vector<int> &b) {
   std::vector<int> result;

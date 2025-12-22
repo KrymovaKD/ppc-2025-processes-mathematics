@@ -18,7 +18,7 @@ class KrymovaKQuickSortSimpleMergeSEQ : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
-  std::vector<int> quickSortIterative(std::vector<int> &arr);
+  void quickSortIterative(std::vector<int> &arr);
 };
 
 }  // namespace krymova_k_quick_sort_simple_merge
