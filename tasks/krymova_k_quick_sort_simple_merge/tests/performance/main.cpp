@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <vector>
 
 #include "krymova_k_quick_sort_simple_merge/common/include/common.hpp"
 #include "krymova_k_quick_sort_simple_merge/mpi/include/ops_mpi.hpp"

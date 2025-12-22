@@ -15,7 +15,7 @@
 ## 3. Базовый алгоритм (последовательный)
 Последовательный алгоритм использует итеративную быструю сортировку с выбором медианы из трех элементов.
 ```cpp
-void QuickSortIterative(std::vector<int> &arr) {
+void quick_sort_iterative(std::vector<int> &arr) {
     if (arr.size() <= 1) return;
 
     std::vector<StackItem> stack{{0, static_cast<int>(arr.size()) - 1}};
@@ -174,7 +174,7 @@ bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
                  local_data.data(), local_size, MPI_INT, 0, MPI_COMM_WORLD);
   }
   
-  quickSortIterative(local_data);
+  quick_sort_iterative(local_data);
   
   std::vector<int> current_data = local_data;
   int partner_distance = 1;
