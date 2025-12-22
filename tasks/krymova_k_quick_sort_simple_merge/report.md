@@ -15,8 +15,8 @@
 ## 3. Базовый алгоритм (последовательный)
 Последовательный алгоритм использует итеративную быструю сортировку с выбором медианы из трех элементов.
 
-std::vector<int> KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector<int>& arr) {
-    if (arr.size() <= 1) return arr;
+void KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector<int>& arr) {
+    if (arr.size() <= 1) return ;
     
     struct StackItem {
         int left;
@@ -74,8 +74,6 @@ std::vector<int> KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector
             stack.push_back({left, partition - 1});
         }
     }
-    
-    return arr;
 }
 
 
@@ -92,7 +90,7 @@ std::vector<int> KrymovaKQuickSortSimpleMergeSEQ::quickSortIterative(std::vector
    - Каждый процесс независимо сортирует свою часть итеративной быстрой сортировкой
    - Используется алгоритм с выбором медианы из трех элементов
 
-3. **Параллельное битоническое слияние**:
+3. **Параллельное слияние**:
    - Процессы объединяются в пары на каждом шаге с использованием операции XOR
    - Пары процессов обмениваются данными через `MPI_Sendrecv`
    - Процесс с меньшим рангом в паре выполняет слияние двух отсортированных массивов
