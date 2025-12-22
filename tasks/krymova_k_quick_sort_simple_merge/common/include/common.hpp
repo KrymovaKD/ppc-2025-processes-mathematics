@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -12,9 +14,7 @@ using OutType = std::vector<int>;
 using TestType = std::tuple<int, std::string>;
 using BaseTask = ppc::task::Task<InType, OutType>;
 
-namespace internal {
-
-inline void sort_three_elements(std::vector<int> &arr, int left, int mid, int right) {
+inline void SortThreeElements(std::vector<int> &arr, int left, int mid, int right) {
   if (arr[left] > arr[mid]) {
     std::swap(arr[left], arr[mid]);
   }
@@ -26,8 +26,7 @@ inline void sort_three_elements(std::vector<int> &arr, int left, int mid, int ri
   }
 }
 
-}  // namespace internal
-inline void quick_sort_iterative(std::vector<int> &arr) {
+inline void QuickSortIterative(std::vector<int> &arr) {
   if (arr.size() <= 1) {
     return;
   }
@@ -48,8 +47,8 @@ inline void quick_sort_iterative(std::vector<int> &arr) {
     }
 
     const int mid = left + ((right - left) / 2);
-    internal::sort_three_elements(arr, left, mid, right);
 
+    SortThreeElements(arr, left, mid, right);
     std::swap(arr[mid], arr[right]);
     const int pivot = arr[right];
 
@@ -72,4 +71,5 @@ inline void quick_sort_iterative(std::vector<int> &arr) {
     }
   }
 }
+
 }  // namespace krymova_k_quick_sort_simple_merge

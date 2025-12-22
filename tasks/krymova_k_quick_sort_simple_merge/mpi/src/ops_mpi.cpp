@@ -67,7 +67,7 @@ bool KrymovaKQuickSortSimpleMergeMPI::RunImpl() {
   }
 
   if (!local_data.empty()) {
-    quick_sort_iterative(local_data);
+    QuickSortIterative(local_data);
   }
 
   std::vector<int> result;
